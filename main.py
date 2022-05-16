@@ -1,8 +1,9 @@
 from tkinter import *
+from tkinter import filedialog as fd
 from pydicom import *
 import glob
 import os
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageEnhance
 from math import sqrt
 from numpy import swapaxes
 
@@ -31,6 +32,7 @@ class Plotno:
         self.canvas = Canvas(root)
         self.clicked = False
         self.hidden = False
+        self.display = "I;16"
 
     def set(self, pixels):
         self.canvas.destroy()
@@ -72,9 +74,9 @@ class Plotno:
 
     def draw(self):
         self.canvas.delete('all')
-        self.img = ImageTk.PhotoImage(image=Image.fromarray(self.pixels[self.warstwa]))
-        self.img_s = ImageTk.PhotoImage(image=Image.fromarray(self.pixels_s[self.warstwa_s]))
-        self.img_b = ImageTk.PhotoImage(image=Image.fromarray(self.pixels_b[self.warstwa_b]))
+        self.img = ImageTk.PhotoImage(image=Image.fromarray(self.pixels[self.warstwa], mode=self.display))
+        self.img_s = ImageTk.PhotoImage(image=Image.fromarray(self.pixels_s[self.warstwa_s], mode=self.display))
+        self.img_b = ImageTk.PhotoImage(image=Image.fromarray(self.pixels_b[self.warstwa_b], mode=self.display))
         if not self.hidden:
             self.canvas.create_rectangle(0, 520-1, 511, 520+200, outline='blue')
             self.canvas.create_rectangle(520-1, 0, 520+200, 511, outline='red')
@@ -99,6 +101,13 @@ class Plotno:
             self.hidden = True
         self.draw()
 
+    def change(self):
+        if self.display == "I;16":
+            self.display = "LA"
+        else:
+            self.display = "I;16"
+        self.draw()
+
 
 root = Tk()
 root.state('zoomed')
@@ -106,18 +115,17 @@ root.title('DICOM Viewer')
 
 pole = Plotno()
 
-menu = Frame(root, bg='azure')
+menu = Frame(root)
 menu.pack(side='left', padx=20, pady=20)
 
 title = Label(menu, text='DICOM Viewer', font=('Arial', 20))
 title.pack()
 
-name = Entry(menu)
-name.pack()
-
-button = Button(menu, text='load', command=lambda: pole.set(load(name.get())))
+button = Button(menu, text='Select Directory', command=lambda: pole.set(load(fd.askdirectory())))
 button.pack()
 hide = Button(menu, text='hide axis', command=pole.hide)
 hide.pack()
+change = Button(menu, text='change display mode', command=pole.change)
+change.pack()
 
 root.mainloop()
