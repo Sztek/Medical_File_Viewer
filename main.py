@@ -1,9 +1,10 @@
 from tkinter import *
 from tkinter import filedialog as fd
 from pydicom import *
+import nibabel as nib
 import glob
 import os
-from PIL import Image, ImageTk, ImageEnhance
+from PIL import Image, ImageTk
 from math import sqrt
 from numpy import swapaxes
 
@@ -127,5 +128,13 @@ hide = Button(menu, text='hide axis', command=pole.hide)
 hide.pack()
 change = Button(menu, text='change display mode', command=pole.change)
 change.pack()
+
+nname = os.path.join('NN_06.nii.gz')
+img = nib.load(nname)
+x=img.get_fdata()
+nimg = ImageTk.PhotoImage(image=Image.fromarray(x[100]))
+can = Canvas(root,width=1000,height=1000)
+can.create_image(100,100,anchor="nw",image=nimg)
+
 
 root.mainloop()
