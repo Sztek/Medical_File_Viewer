@@ -20,6 +20,7 @@ class Plotno:
         self.img_s = ImageTk
         self.img_b = ImageTk
         self.canvas = Canvas(root)
+        self.label = Label(root, text='0 0 0')
         self.clicked = False
         self.hidden = False
         self.display = "I;16"
@@ -33,36 +34,41 @@ class Plotno:
             self.pixels = pixels
             self.pixels_s = swapaxes(self.pixels, 0, 2)
             self.pixels_b = swapaxes(self.pixels, 0, 1)
-            sze = len(self.pixels) + len(self.pixels_b) + 8
-            wys = len(self.pixels) + len(self.pixels_s) + 8
+            sze = len(self.pixels) + len(self.pixels_s) + 8
+            wys = len(self.pixels) + len(self.pixels_b) + 8
             self.canvas = Canvas(root, width=sze, height=wys)
             self.warstwa = 0
             self.canvas.pack(side='right', padx=10, pady=10)
+            self.label.pack(side='bottom')
             self.draw()
-            self.canvas.bind('<Motion>', self.move_tick)
-            self.canvas.bind('<Button-1>', self.onclick)
+            self.canvas.bind('<Motion>', self.tick)
+            self.canvas.bind('<ButtonPress-1>', self.onclick)
+            self.canvas.bind('<ButtonRelease-1>', self.onrelease)
 
-    def move_tick(self, event):
+    def tick(self, event):
         x = self.canvas.winfo_pointerx() - self.canvas.winfo_rootx()
         y = self.canvas.winfo_pointery() - self.canvas.winfo_rooty()
-        if not self.clicked:
+        if self.clicked and x > 0 and y > 0:
             if x < len(self.pixels_s):
                 self.warstwa_s = x
                 if self.warstwa_s >= len(self.pixels_s):
                     self.warstwa_s = len(self.pixels_s)-1
             elif len(self.pixels_s) + 8 < x < len(self.pixels_s) + 8 + len(self.pixels):
-                self.warstwa = x - len(self.pixels_b) - 8
+                self.warstwa = x - len(self.pixels_s) - 8
             if y < len(self.pixels_b):
                 self.warstwa_b = y
                 if self.warstwa_b >= len(self.pixels_b):
                     self.warstwa_b = len(self.pixels_b)-1
             elif len(self.pixels_b) + 8 < y < len(self.pixels_b) + 8 + len(self.pixels):
-                self.warstwa = y - len(self.pixels_s) - 8
+                self.warstwa = y - len(self.pixels_b) - 8
         self.draw()
+        self.label['text'] = str(self.warstwa)+' '+str(self.warstwa_s)+' '+str(self.warstwa_b)
 
     def draw(self):
         red = len(self.pixels) + len(self.pixels_b) + 8
         blue = len(self.pixels) + len(self.pixels_s) + 8
+        greenb = len(self.pixels_s)
+        greenr = len(self.pixels_b)
         self.canvas.delete('all')
         self.img = ImageTk.PhotoImage(image=Image.fromarray(self.pixels[self.warstwa]))
         self.img_s = ImageTk.PhotoImage(image=Image.fromarray(self.pixels_s[self.warstwa_s]))
@@ -74,15 +80,19 @@ class Plotno:
         self.canvas.create_image(len(self.pixels_s)+8, 0, anchor="nw", image=self.img_s)
         self.canvas.create_image(0, len(self.pixels_b)+8, anchor="nw", image=self.img_b)
         if not self.hidden:
+            greenrpoz = len(self.pixels_s)+8+self.warstwa
+            greenbpoz = len(self.pixels_b)+8+self.warstwa
             self.canvas.create_rectangle(self.warstwa_s, 0, self.warstwa_s + 1, red, fill='red', outline='')
             self.canvas.create_rectangle(0, self.warstwa_b, blue, self.warstwa_b + 1, fill='blue', outline='')
+            self.canvas.create_rectangle(greenrpoz, 0, greenrpoz+1, greenr, fill='green', outline='')
+            self.canvas.create_rectangle(0, greenbpoz, greenb, greenbpoz+1, fill='green', outline='')
 
     def onclick(self, event):
-        if self.clicked:
-            self.clicked = False
-            self.move_tick(event)
-        else:
-            self.clicked = True
+        self.clicked = True
+        self.tick(event)
+
+    def onrelease(self, event):
+        self.clicked = False
 
     def hide(self):
         if self.hidden:
