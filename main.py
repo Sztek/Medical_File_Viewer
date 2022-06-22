@@ -5,7 +5,41 @@ import nibabel as nib
 import glob
 import os
 from PIL import Image, ImageTk
-from numpy import swapaxes
+from numpy import swapaxes, int16, eye
+
+
+class Plik:
+    def __init__(self):
+        self.pixels = []
+        self.affine = eye(4)
+        self.header = nib.Nifti1Header()
+        self.shape = 0
+
+    def saveNifti(self):
+        img = nib.Nifti1Image(self.pixels, self.affine, self.header)
+        nib.save(img, 'clipped_image.nii')
+
+
+class Dicom(Plik):
+    def load(self, path):
+        self.pixels = []
+        if os.path.isdir(path):
+            for file in glob.glob(path + '/*.dcm'):
+                ds = dcmread(file)
+                self.pixels.append(ds.pixel_array)
+        self.affine = eye(4)
+        self.pixels = int16(self.pixels)
+        return self.pixels
+
+
+class Nifti(Plik):
+    def load(self, path):
+        name = os.path.join(path.name)
+        img = nib.load(name)
+        self.pixels = img.get_fdata()
+        self.affine = img.affine
+        self.header = img.header
+        return self.pixels
 
 
 class Plotno:
@@ -20,10 +54,8 @@ class Plotno:
         self.img_s = ImageTk
         self.img_b = ImageTk
         self.canvas = Canvas(root)
-        self.label = Label(root, text='0 0 0')
         self.clicked = False
         self.hidden = False
-        self.display = "I;16"
 
     def set(self, pixels):
         self.canvas.destroy()
@@ -39,7 +71,6 @@ class Plotno:
             self.canvas = Canvas(root, width=sze, height=wys)
             self.warstwa = 0
             self.canvas.pack(side='right', padx=10, pady=10)
-            self.label.pack(side='bottom')
             self.draw()
             self.canvas.bind('<Motion>', self.tick)
             self.canvas.bind('<ButtonPress-1>', self.onclick)
@@ -62,7 +93,6 @@ class Plotno:
             elif len(self.pixels_b) + 8 < y < len(self.pixels_b) + 8 + len(self.pixels):
                 self.warstwa = y - len(self.pixels_b) - 8
         self.draw()
-        self.label['text'] = str(self.warstwa)+' '+str(self.warstwa_s)+' '+str(self.warstwa_b)
 
     def draw(self):
         red = len(self.pixels) + len(self.pixels_b) + 8
@@ -101,33 +131,14 @@ class Plotno:
             self.hidden = True
         self.draw()
 
-    def change(self):
-        if self.display == "I;16":
-            self.display = "LA"
-        else:
-            self.display = "I;16"
-        self.draw()
-
-    def loadDicom(self, path):
-        pixels = []
-        if os.path.isdir(path):
-            for file in glob.glob(path + '/*.dcm'):
-                ds = dcmread(file)
-                pixels.append(ds.pixel_array)
-        return pixels
-
-    def loadNifti(self, path):
-        name = os.path.join(path.name)
-        img = nib.load(name)
-        pixels = img.get_fdata()
-        return pixels
-
 
 root = Tk()
 root.state('zoomed')
 root.title('DICOM Viewer')
 
 pole = Plotno()
+dic = Dicom()
+nif = Nifti()
 
 menu = Frame(root)
 menu.pack(side='left', padx=20, pady=20)
@@ -135,16 +146,20 @@ menu.pack(side='left', padx=20, pady=20)
 title = Label(menu, text='DICOM Viewer', font=('Arial', 20))
 title.pack()
 
-buttond = Button(menu, text='Select Dicom', command=lambda: pole.set(pole.loadDicom(fd.askdirectory())))
+buttond = Button(menu, text='Select Dicom', command=lambda: pole.set(dic.load(fd.askdirectory())))
 buttond.pack()
 
-buttonn = Button(menu, text='Select Nifti', command=lambda: pole.set(pole.loadNifti(fd.askopenfile())))
+buttonn = Button(menu, text='Select Nifti', command=lambda: pole.set(nif.load(fd.askopenfile())))
 buttonn.pack()
+
+buttonx = Button(menu, text='save Nifti from DICOM', command=dic.saveNifti)
+buttonx.pack()
+
+buttonz = Button(menu, text='save Nifti from Nifti', command=nif.saveNifti)
+buttonz.pack()
 
 hide = Button(menu, text='hide axis', command=pole.hide)
 hide.pack()
-change = Button(menu, text='change display mode', command=pole.change)
-change.pack()
 
 
 root.mainloop()
