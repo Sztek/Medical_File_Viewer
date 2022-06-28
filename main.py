@@ -17,7 +17,10 @@ class Plik:
 
     def saveNifti(self):
         img = nib.Nifti1Image(self.pixels, self.affine, self.header)
-        nib.save(img, 'clipped_image.nii')
+
+        f = fd.asksaveasfilename(initialfile='new.nii',
+                          defaultextension=".nii", filetypes=[("All Files", "*.*"), ("Text Documents", "*.txt")])
+        nib.save(img, f)
 
 
 class Dicom(Plik):
